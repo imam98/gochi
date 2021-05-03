@@ -23,7 +23,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 	defer w.mu.Unlock()
 
 	if w.file == nil {
-		err := w.openNew()
+		err := w.openNewOrExisting()
 		if err != nil {
 			return 0, err
 		}
@@ -51,14 +51,14 @@ func (w *Writer) Close() error {
 	return err
 }
 
-func (w *Writer) openNew() error {
+func (w *Writer) openNewOrExisting() error {
 	err := os.MkdirAll(w.DirPath, 0755)
 	if err != nil {
 		return fmt.Errorf("cannot create log dir: %w", err)
 	}
 
 	mode := os.FileMode(0600)
-	_, err = os.Stat(filepath.Join(w.DirPath, w.Filename))
+	_, err = os.Stat(w.pathToFile())
 	if err != nil {
 		if os.IsNotExist(err) {
 			file, err := os.OpenFile(w.pathToFile(), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
@@ -72,6 +72,12 @@ func (w *Writer) openNew() error {
 
 		return fmt.Errorf("unexpected error: %w", err)
 	}
+
+	file, err := os.OpenFile(w.pathToFile(), os.O_APPEND|os.O_WRONLY, mode)
+	if err != nil {
+		return fmt.Errorf("error opening log file: %w", err)
+	}
+	w.file = file
 
 	return nil
 }
