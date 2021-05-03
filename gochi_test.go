@@ -67,6 +67,51 @@ func TestMakeLogDir(t *testing.T) {
 	assertFileCount(t, gochiWriter.DirPath, 1)
 }
 
+func TestRotate(t *testing.T) {
+	logdir, err := makeTempDir("TestRotate")
+	require.NoError(t, err)
+	defer os.RemoveAll(logdir)
+
+	gochiWriter := &Writer{
+		Filename: "test_log.log",
+		DirPath:  logdir,
+	}
+	defer gochiWriter.Close()
+
+	data := []byte("foooo")
+	n, err := gochiWriter.Write(data)
+	require.NoError(t, err)
+	assert.Equal(t, len(data), n)
+	assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+
+	err = gochiWriter.Rotate()
+	require.NoError(t, err)
+	assertFileCount(t, gochiWriter.DirPath, 2)
+
+	// --- Test write in different time --- //
+	//nowFunc = func() time.Time {
+	//	val, _ := time.Parse("02-Jan-2006 15:04:05", "03-05-2021 13:00:00")
+	//	return val
+	//}
+	//
+	//data := []byte("foooo")
+	//n, err := gochiWriter.Write(data)
+	//require.NoError(t, err)
+	//assert.Equal(t, len(data), n)
+	//assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+
+	//nowFunc = func() time.Time {
+	//	val, _ := time.Parse("02-Jan-2006 15:04:05", "04-05-2021 13:00:00")
+	//	return val
+	//}
+	//
+	//n, err = gochiWriter.Write(data)
+	//require.NoError(t, err)
+	//assert.Equal(t, len(data), n)
+	//assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+	//assertFileCount(t, gochiWriter.DirPath, 2)
+}
+
 func assertContentMatch(t *testing.T, logFile string, value []byte) {
 	fileInfo, err := os.Stat(logFile)
 	require.NoError(t, err)
