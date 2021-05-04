@@ -44,6 +44,23 @@ func TestWrite(t *testing.T) {
 		assert.Equal(t, len(newData), n)
 		assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
 	})
+
+	t.Run("file exists different day", func(t *testing.T) {
+		gochiWriter := &Writer{
+			Filename: "test_write.log",
+			DirPath:  logdir,
+		}
+		defer gochiWriter.Close()
+		nowFunc = func() time.Time {
+			return time.Now().AddDate(0, 0, 1)
+		}
+
+		n, err := gochiWriter.Write(data)
+		require.NoError(t, err)
+		assert.Equal(t, len(data), n)
+		assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+		assertFileCount(t, gochiWriter.DirPath, 2)
+	})
 }
 
 func TestMakeLogDir(t *testing.T) {

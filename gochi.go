@@ -33,8 +33,6 @@ func (w *Writer) Write(p []byte) (int, error) {
 		if err != nil {
 			return 0, err
 		}
-
-		w.lastWrite = nowFunc()
 	}
 
 	y1, m1, d1 := w.lastWrite.Date()
@@ -73,7 +71,7 @@ func (w *Writer) openNewOrExisting() error {
 		return fmt.Errorf("cannot create log dir: %w", err)
 	}
 
-	_, err = os.Stat(w.pathToFile())
+	fileInfo, err := os.Stat(w.pathToFile())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return w.openNew()
@@ -87,6 +85,7 @@ func (w *Writer) openNewOrExisting() error {
 		return fmt.Errorf("error opening log file: %w", err)
 	}
 	w.file = file
+	w.lastWrite = fileInfo.ModTime()
 
 	return nil
 }
@@ -98,6 +97,7 @@ func (w *Writer) openNew() error {
 	}
 
 	w.file = file
+	w.lastWrite = nowFunc()
 	return nil
 }
 
