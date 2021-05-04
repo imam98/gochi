@@ -16,11 +16,12 @@ type timeFunc = func() time.Time
 var nowFunc timeFunc = time.Now
 
 type Writer struct {
-	Filename string
-	DirPath  string
-	MaxAge   int
-	file     *os.File
-	mu       sync.Mutex
+	Filename  string
+	DirPath   string
+	MaxAge    int
+	file      *os.File
+	mu        sync.Mutex
+	lastWrite time.Time
 }
 
 func (w *Writer) Write(p []byte) (int, error) {
@@ -32,6 +33,17 @@ func (w *Writer) Write(p []byte) (int, error) {
 		if err != nil {
 			return 0, err
 		}
+
+		w.lastWrite = nowFunc()
+	}
+
+	y1, m1, d1 := w.lastWrite.Date()
+	y2, m2, d2 := nowFunc().Date()
+	if y2 > y1 || m2 > m1 || d2 > d1 {
+		err := w.rotate()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	n, err := w.file.Write(p)
@@ -39,6 +51,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("failed to write log: %w", err)
 	}
 
+	w.lastWrite = nowFunc()
 	return n, nil
 }
 
@@ -51,13 +64,7 @@ func (w *Writer) Close() error {
 func (w *Writer) Rotate() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
-	err := w.makeBackup()
-	if err != nil {
-		return fmt.Errorf("error creating backup: %w", err)
-	}
-
-	return w.openNew()
+	return w.rotate()
 }
 
 func (w *Writer) openNewOrExisting() error {
@@ -102,7 +109,7 @@ func (w *Writer) makeBackup() error {
 
 	ext := filepath.Ext(w.Filename)
 	rawFilename := w.Filename[:len(w.Filename)-len(ext)]
-	timeSuffix := nowFunc().Format("02-Jan-2006T15-04-05")
+	timeSuffix := w.lastWrite.Format("02-01-2006T15-04-05")
 	newFilename := fmt.Sprintf("%s-%s%s", rawFilename, timeSuffix, ext)
 	oldPath := filepath.Join(w.DirPath, w.Filename)
 	newPath := filepath.Join(w.DirPath, newFilename)
@@ -118,6 +125,15 @@ func (w *Writer) close() error {
 	_ = w.file.Close()
 	w.file = nil
 	return err
+}
+
+func (w *Writer) rotate() error {
+	err := w.makeBackup()
+	if err != nil {
+		return fmt.Errorf("error creating backup: %w", err)
+	}
+
+	return w.openNew()
 }
 
 func (w *Writer) pathToFile() string {
