@@ -3,6 +3,7 @@ package gochi
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,6 +23,11 @@ type Writer struct {
 	file      *os.File
 	mu        sync.Mutex
 	lastWrite time.Time
+}
+
+type logInfo struct {
+	timestamp time.Time
+	os.FileInfo
 }
 
 func (w *Writer) Write(p []byte) (int, error) {
@@ -134,6 +140,25 @@ func (w *Writer) rotate() error {
 	}
 
 	return w.openNew()
+}
+
+func (w *Writer) oldLogFiles() ([]logInfo, error) {
+	files, err := ioutil.ReadDir(w.DirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read log dir: %w", err)
+	}
+
+	ext := filepath.Ext(w.Filename)
+	filename := w.Filename[:len(w.Filename)-len(ext)]
+
+	var oldLogs []logInfo
+	for _, val := range files {
+		if t, err := time.Parse(fmt.Sprintf("%s-02-01-2006T15-04-05%s", filename, ext), val.Name()); err == nil {
+			oldLogs = append(oldLogs, logInfo{timestamp: t, FileInfo: val})
+		}
+	}
+
+	return oldLogs, nil
 }
 
 func (w *Writer) pathToFile() string {

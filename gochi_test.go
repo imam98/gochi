@@ -165,6 +165,43 @@ func TestWriteDifferentTime(t *testing.T) {
 	}
 }
 
+func TestGetOldLogFiles(t *testing.T) {
+	logdir, err := makeTempDir("TestOldLogs")
+	require.NoError(t, err)
+	defer os.RemoveAll(logdir)
+
+	gochiWriter := &Writer{
+		Filename: "test_log.log",
+		DirPath:  logdir,
+	}
+	defer gochiWriter.Close()
+
+	mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "06-May-2021 13:20:00")
+
+	// The magic of closure
+	var i int
+	nowFunc = func() time.Time {
+		return mockTime.AddDate(0, 0, i)
+	}
+
+	data := []byte("foooo")
+	for i = 0; i <= 2; i++ {
+		_, err := gochiWriter.Write(data)
+		require.NoError(t, err)
+	}
+	assertFileCount(t, gochiWriter.DirPath, 3)
+
+	files, err := gochiWriter.oldLogFiles()
+	require.NoError(t, err)
+	assert.Equal(t, 2, len(files))
+
+	for _, val := range files {
+		if !val.timestamp.Equal(mockTime) && !val.timestamp.Equal(mockTime.AddDate(0, 0, 1)) {
+			t.Errorf("Unexpected log timestamp: %v", val.timestamp)
+		}
+	}
+}
+
 func assertContentMatch(t *testing.T, logFile string, value []byte) {
 	fileInfo, err := os.Stat(logFile)
 	require.NoError(t, err)
