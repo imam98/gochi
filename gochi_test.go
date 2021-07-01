@@ -239,6 +239,26 @@ func TestRotateCleanExpiredLogs(t *testing.T) {
 	assertFileCount(t, gochiWriter.DirPath, 1)
 }
 
+func TestDirPathIsFile(t *testing.T) {
+	tempDir, err := makeTempDir("TestDirPath")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+	logdir := filepath.Join(tempDir, "is_file")
+	err = makeEmptyFile(logdir)
+	require.NoError(t, err)
+
+	gochiWriter := &Writer{
+		Filename: "test_log.log",
+		DirPath:  logdir,
+	}
+	defer gochiWriter.Close()
+
+	data := []byte("foooo")
+	_, err = gochiWriter.Write(data)
+	// This gives an error, but how do I sure it is because the dir path is pointed to a file?
+	assert.Error(t, err)
+}
+
 func assertContentMatch(t *testing.T, logFile string, value []byte) {
 	fileInfo, err := os.Stat(logFile)
 	require.NoError(t, err)
@@ -261,4 +281,11 @@ func makeTempDir(name string) (string, error) {
 	return dir, err
 }
 
-// TODO: Check behavior when dir path points to a file
+func makeEmptyFile(pathToFile string) error {
+	file, err := os.OpenFile(pathToFile, os.O_RDONLY|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+
+	return file.Close()
+}
