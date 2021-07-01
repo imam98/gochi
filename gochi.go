@@ -41,9 +41,7 @@ func (w *Writer) Write(p []byte) (int, error) {
 		}
 	}
 
-	y1, m1, d1 := w.lastWrite.Date()
-	y2, m2, d2 := nowFunc().Date()
-	if y2 > y1 || m2 > m1 || d2 > d1 {
+	if w.isDateBefore(w.lastWrite, nowFunc()) {
 		err := w.rotate()
 		if err != nil {
 			return 0, err
@@ -139,7 +137,21 @@ func (w *Writer) rotate() error {
 		return fmt.Errorf("error creating backup: %w", err)
 	}
 
+	if w.MaxAge > 0 {
+		go w.cleanExpiredLogs()
+	}
+
 	return w.openNew()
+}
+
+func (w *Writer) cleanExpiredLogs() {
+	oldLogs, _ := w.oldLogFiles()
+	thresholdDate := nowFunc().AddDate(0, 0, -w.MaxAge)
+	for _, val := range oldLogs {
+		if w.isDateBefore(val.timestamp, thresholdDate) {
+			_ = os.Remove(filepath.Join(w.DirPath, val.Name()))
+		}
+	}
 }
 
 func (w *Writer) oldLogFiles() ([]logInfo, error) {
@@ -163,4 +175,10 @@ func (w *Writer) oldLogFiles() ([]logInfo, error) {
 
 func (w *Writer) pathToFile() string {
 	return filepath.Join(w.DirPath, w.Filename)
+}
+
+func (w *Writer) isDateBefore(n1 time.Time, n2 time.Time) bool {
+	y1, m1, d1 := n1.Date()
+	y2, m2, d2 := n2.Date()
+	return y2 > y1 || m2 > m1 || d2 > d1
 }

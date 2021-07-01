@@ -202,6 +202,43 @@ func TestGetOldLogFiles(t *testing.T) {
 	}
 }
 
+func TestRotateCleanExpiredLogs(t *testing.T) {
+	logdir, err := makeTempDir("TestExpLogs")
+	require.NoError(t, err)
+	defer os.RemoveAll(logdir)
+
+	gochiWriter := &Writer{
+		Filename: "test_log.log",
+		DirPath:  logdir,
+		MaxAge:   1,
+	}
+	defer gochiWriter.Close()
+
+	mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "30-Jun-2021 16:00:00")
+
+	// The magic of closure
+	var i int
+	nowFunc = func() time.Time {
+		return mockTime.AddDate(0, 0, i)
+	}
+
+	data := []byte("foooo")
+	for i = 0; i <= 2; i++ {
+		_, err := gochiWriter.Write(data)
+		require.NoError(t, err)
+		// Delay for 100 ms so the writer can rotate peacefully
+		time.Sleep(100 * time.Millisecond)
+	}
+	assertFileCount(t, gochiWriter.DirPath, 2)
+
+	// Skip i = 3 and write at i = 4 (4 days later after mockTime)
+	i = 4
+	_, err = gochiWriter.Write(data)
+	require.NoError(t, err)
+	time.Sleep(100 * time.Millisecond)
+	assertFileCount(t, gochiWriter.DirPath, 1)
+}
+
 func assertContentMatch(t *testing.T, logFile string, value []byte) {
 	fileInfo, err := os.Stat(logFile)
 	require.NoError(t, err)
@@ -223,3 +260,5 @@ func makeTempDir(name string) (string, error) {
 	err := os.Mkdir(dir, 0700)
 	return dir, err
 }
+
+// TODO: Check behavior when dir path points to a file
