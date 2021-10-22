@@ -1,4 +1,4 @@
-module github.com/imam98/gochi
+module github.com/imam98/puterin
 
 go 1.15
 

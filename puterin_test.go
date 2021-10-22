@@ -1,4 +1,4 @@
-package gochi
+package puterin
 
 import (
 	"github.com/stretchr/testify/assert"

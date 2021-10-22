@@ -1,4 +1,4 @@
-package gochi
+package puterin
 
 import (
 	"fmt"
