@@ -178,7 +178,9 @@ func (w *Writer) pathToFile() string {
 }
 
 func (w *Writer) isDateBefore(n1 time.Time, n2 time.Time) bool {
-	y1, m1, d1 := n1.Date()
-	y2, m2, d2 := n2.Date()
-	return y2 > y1 || m2 > m1 || d2 > d1
+	if n1.Year() != n2.Year() {
+		return n1.Year() < n2.Year()
+	}
+
+	return n1.YearDay() < n2.YearDay()
 }

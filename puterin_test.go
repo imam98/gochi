@@ -4,6 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -207,36 +208,76 @@ func TestRotateCleanExpiredLogs(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(logdir)
 
-	gochiWriter := &Writer{
-		Filename: "test_log.log",
-		DirPath:  logdir,
-		MaxAge:   1,
-	}
-	defer gochiWriter.Close()
+	t.Run("1 day max age", func(t *testing.T) {
+		gochiWriter := &Writer{
+			Filename: "test_log.log",
+			DirPath:  logdir,
+			MaxAge:   1,
+		}
+		defer gochiWriter.Close()
 
-	mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "30-Jun-2021 16:00:00")
+		mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "30-Jun-2021 16:00:00")
 
-	// The magic of closure
-	var i int
-	nowFunc = func() time.Time {
-		return mockTime.AddDate(0, 0, i)
-	}
+		// The magic of closure
+		var i int
+		nowFunc = func() time.Time {
+			return mockTime.AddDate(0, 0, i)
+		}
 
-	data := []byte("foooo")
-	for i = 0; i <= 2; i++ {
-		_, err := gochiWriter.Write(data)
+		data := []byte("foooo")
+		for i = 0; i <= 2; i++ {
+			_, err := gochiWriter.Write(data)
+			require.NoError(t, err)
+			// Delay for 100 ms so the writer can rotate peacefully
+			time.Sleep(100 * time.Millisecond)
+		}
+		assertFileCount(t, gochiWriter.DirPath, 2)
+
+		// Skip i = 3 and write at i = 4 (4 days later after mockTime)
+		i = 4
+		_, err = gochiWriter.Write(data)
 		require.NoError(t, err)
-		// Delay for 100 ms so the writer can rotate peacefully
 		time.Sleep(100 * time.Millisecond)
-	}
-	assertFileCount(t, gochiWriter.DirPath, 2)
+		assertFileCount(t, gochiWriter.DirPath, 1)
+	})
 
-	// Skip i = 3 and write at i = 4 (4 days later after mockTime)
-	i = 4
-	_, err = gochiWriter.Write(data)
-	require.NoError(t, err)
-	time.Sleep(100 * time.Millisecond)
-	assertFileCount(t, gochiWriter.DirPath, 1)
+	t.Run("30 day max age", func(t *testing.T) {
+		// Prepare rng seed
+		rand.Seed(time.Now().UnixNano())
+
+		gochiWriter := &Writer{
+			Filename: "test_log.log",
+			DirPath:  logdir,
+			MaxAge:   30,
+		}
+		defer gochiWriter.Close()
+
+		mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "25-Oct-2021 21:00:00")
+
+		// The magic of closure
+		var i int
+		nowFunc = func() time.Time {
+			//sign := []int{-1, 1}
+			//signVal := sign[rand.Intn(2)]
+			return mockTime.AddDate(0, 0, i*29)
+		}
+
+		data := []byte("foooo")
+		for i = 0; i <= 2; i++ {
+			_, err := gochiWriter.Write(data)
+			require.NoError(t, err)
+			// Delay for 100 ms so the writer can rotate peacefully
+			time.Sleep(100 * time.Millisecond)
+		}
+		assertFileCount(t, gochiWriter.DirPath, 2)
+
+		// Skip i = 3 and write at i = 4 (4 * 29 days later after mockTime)
+		i = 4
+		_, err = gochiWriter.Write(data)
+		require.NoError(t, err)
+		time.Sleep(100 * time.Millisecond)
+		assertFileCount(t, gochiWriter.DirPath, 1)
+	})
 }
 
 func TestDirPathIsFile(t *testing.T) {
