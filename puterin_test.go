@@ -19,48 +19,48 @@ func TestWrite(t *testing.T) {
 	data := []byte("foooo")
 
 	t.Run("file not exists", func(t *testing.T) {
-		gochiWriter := &Writer{
+		puterinWriter := &Writer{
 			Filename: "test_write.log",
 			DirPath:  logdir,
 		}
-		defer gochiWriter.Close()
+		defer puterinWriter.Close()
 
-		n, err := gochiWriter.Write(data)
+		n, err := puterinWriter.Write(data)
 		require.NoError(t, err)
 		assert.Equal(t, len(data), n)
-		assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+		assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
 	})
 
 	t.Run("file exists", func(t *testing.T) {
-		gochiWriter := &Writer{
+		puterinWriter := &Writer{
 			Filename: "test_write.log",
 			DirPath:  logdir,
 		}
-		defer gochiWriter.Close()
+		defer puterinWriter.Close()
 
 		newData := []byte("baaaaarr")
 		data = append(data, newData...)
-		n, err := gochiWriter.Write(newData)
+		n, err := puterinWriter.Write(newData)
 		require.NoError(t, err)
 		assert.Equal(t, len(newData), n)
-		assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+		assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
 	})
 
 	t.Run("file exists different day", func(t *testing.T) {
-		gochiWriter := &Writer{
+		puterinWriter := &Writer{
 			Filename: "test_write.log",
 			DirPath:  logdir,
 		}
-		defer gochiWriter.Close()
+		defer puterinWriter.Close()
 		nowFunc = func() time.Time {
 			return time.Now().AddDate(0, 0, 1)
 		}
 
-		n, err := gochiWriter.Write(data)
+		n, err := puterinWriter.Write(data)
 		require.NoError(t, err)
 		assert.Equal(t, len(data), n)
-		assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
-		assertFileCount(t, gochiWriter.DirPath, 2)
+		assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
+		assertFileCount(t, puterinWriter.DirPath, 2)
 	})
 }
 
@@ -68,22 +68,22 @@ func TestMakeLogDir(t *testing.T) {
 	logdir := filepath.Join(os.TempDir(), "TestDir")
 	defer os.RemoveAll(logdir)
 
-	gochiWriter := &Writer{
+	puterinWriter := &Writer{
 		Filename: "test_log.log",
 		DirPath:  logdir,
 	}
-	defer gochiWriter.Close()
+	defer puterinWriter.Close()
 
 	data := []byte("foooo")
-	n, err := gochiWriter.Write(data)
+	n, err := puterinWriter.Write(data)
 	require.NoError(t, err)
 	assert.Equal(t, len(data), n)
 
-	fileInfo, err := os.Stat(filepath.Join(gochiWriter.DirPath, gochiWriter.Filename))
+	fileInfo, err := os.Stat(filepath.Join(puterinWriter.DirPath, puterinWriter.Filename))
 	require.NoError(t, err)
 	assert.EqualValues(t, len(data), fileInfo.Size())
-	assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
-	assertFileCount(t, gochiWriter.DirPath, 1)
+	assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
+	assertFileCount(t, puterinWriter.DirPath, 1)
 }
 
 func TestRotate(t *testing.T) {
@@ -91,21 +91,21 @@ func TestRotate(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(logdir)
 
-	gochiWriter := &Writer{
+	puterinWriter := &Writer{
 		Filename: "test_log.log",
 		DirPath:  logdir,
 	}
-	defer gochiWriter.Close()
+	defer puterinWriter.Close()
 
 	data := []byte("foooo")
-	n, err := gochiWriter.Write(data)
+	n, err := puterinWriter.Write(data)
 	require.NoError(t, err)
 	assert.Equal(t, len(data), n)
-	assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+	assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
 
-	err = gochiWriter.Rotate()
+	err = puterinWriter.Rotate()
 	require.NoError(t, err)
-	assertFileCount(t, gochiWriter.DirPath, 2)
+	assertFileCount(t, puterinWriter.DirPath, 2)
 }
 
 func TestWriteDifferentTime(t *testing.T) {
@@ -135,11 +135,11 @@ func TestWriteDifferentTime(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(logdir)
 
-			gochiWriter := &Writer{
+			puterinWriter := &Writer{
 				Filename: "test_log.log",
 				DirPath:  logdir,
 			}
-			defer gochiWriter.Close()
+			defer puterinWriter.Close()
 
 			nowFunc = func() time.Time {
 				val, _ := time.Parse("02-Jan-2006 15:04:05", tc.timeBefore)
@@ -147,21 +147,21 @@ func TestWriteDifferentTime(t *testing.T) {
 			}
 
 			data := []byte("foooo")
-			n, err := gochiWriter.Write(data)
+			n, err := puterinWriter.Write(data)
 			require.NoError(t, err)
 			assert.Equal(t, len(data), n)
-			assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
+			assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
 
 			nowFunc = func() time.Time {
 				val, _ := time.Parse("02-Jan-2006 15:04:05", tc.timeAfter)
 				return val
 			}
 
-			n, err = gochiWriter.Write(data)
+			n, err = puterinWriter.Write(data)
 			require.NoError(t, err)
 			assert.Equal(t, len(data), n)
-			assertContentMatch(t, filepath.Join(gochiWriter.DirPath, gochiWriter.Filename), data)
-			assertFileCount(t, gochiWriter.DirPath, 2)
+			assertContentMatch(t, filepath.Join(puterinWriter.DirPath, puterinWriter.Filename), data)
+			assertFileCount(t, puterinWriter.DirPath, 2)
 		})
 	}
 }
@@ -171,11 +171,11 @@ func TestGetOldLogFiles(t *testing.T) {
 	require.NoError(t, err)
 	defer os.RemoveAll(logdir)
 
-	gochiWriter := &Writer{
+	puterinWriter := &Writer{
 		Filename: "test_log.log",
 		DirPath:  logdir,
 	}
-	defer gochiWriter.Close()
+	defer puterinWriter.Close()
 
 	mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "06-May-2021 13:20:00")
 
@@ -187,12 +187,12 @@ func TestGetOldLogFiles(t *testing.T) {
 
 	data := []byte("foooo")
 	for i = 0; i <= 2; i++ {
-		_, err := gochiWriter.Write(data)
+		_, err := puterinWriter.Write(data)
 		require.NoError(t, err)
 	}
-	assertFileCount(t, gochiWriter.DirPath, 3)
+	assertFileCount(t, puterinWriter.DirPath, 3)
 
-	files, err := gochiWriter.oldLogFiles()
+	files, err := puterinWriter.oldLogFiles()
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(files))
 
@@ -209,12 +209,12 @@ func TestRotateCleanExpiredLogs(t *testing.T) {
 	defer os.RemoveAll(logdir)
 
 	t.Run("1 day max age", func(t *testing.T) {
-		gochiWriter := &Writer{
+		puterinWriter := &Writer{
 			Filename: "test_log.log",
 			DirPath:  logdir,
 			MaxAge:   1,
 		}
-		defer gochiWriter.Close()
+		defer puterinWriter.Close()
 
 		mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "30-Jun-2021 16:00:00")
 
@@ -226,31 +226,31 @@ func TestRotateCleanExpiredLogs(t *testing.T) {
 
 		data := []byte("foooo")
 		for i = 0; i <= 2; i++ {
-			_, err := gochiWriter.Write(data)
+			_, err := puterinWriter.Write(data)
 			require.NoError(t, err)
 			// Delay for 100 ms so the writer can rotate peacefully
 			time.Sleep(100 * time.Millisecond)
 		}
-		assertFileCount(t, gochiWriter.DirPath, 2)
+		assertFileCount(t, puterinWriter.DirPath, 2)
 
 		// Skip i = 3 and write at i = 4 (4 days later after mockTime)
 		i = 4
-		_, err = gochiWriter.Write(data)
+		_, err = puterinWriter.Write(data)
 		require.NoError(t, err)
 		time.Sleep(100 * time.Millisecond)
-		assertFileCount(t, gochiWriter.DirPath, 1)
+		assertFileCount(t, puterinWriter.DirPath, 1)
 	})
 
 	t.Run("30 day max age", func(t *testing.T) {
 		// Prepare rng seed
 		rand.Seed(time.Now().UnixNano())
 
-		gochiWriter := &Writer{
+		puterinWriter := &Writer{
 			Filename: "test_log.log",
 			DirPath:  logdir,
 			MaxAge:   30,
 		}
-		defer gochiWriter.Close()
+		defer puterinWriter.Close()
 
 		mockTime, _ := time.Parse("02-Jan-2006 15:04:05", "25-Oct-2021 21:00:00")
 
@@ -264,19 +264,19 @@ func TestRotateCleanExpiredLogs(t *testing.T) {
 
 		data := []byte("foooo")
 		for i = 0; i <= 2; i++ {
-			_, err := gochiWriter.Write(data)
+			_, err := puterinWriter.Write(data)
 			require.NoError(t, err)
 			// Delay for 100 ms so the writer can rotate peacefully
 			time.Sleep(100 * time.Millisecond)
 		}
-		assertFileCount(t, gochiWriter.DirPath, 2)
+		assertFileCount(t, puterinWriter.DirPath, 2)
 
 		// Skip i = 3 and write at i = 4 (4 * 29 days later after mockTime)
 		i = 4
-		_, err = gochiWriter.Write(data)
+		_, err = puterinWriter.Write(data)
 		require.NoError(t, err)
 		time.Sleep(100 * time.Millisecond)
-		assertFileCount(t, gochiWriter.DirPath, 1)
+		assertFileCount(t, puterinWriter.DirPath, 1)
 	})
 }
 
@@ -288,14 +288,14 @@ func TestDirPathIsFile(t *testing.T) {
 	err = makeEmptyFile(logdir)
 	require.NoError(t, err)
 
-	gochiWriter := &Writer{
+	puterinWriter := &Writer{
 		Filename: "test_log.log",
 		DirPath:  logdir,
 	}
-	defer gochiWriter.Close()
+	defer puterinWriter.Close()
 
 	data := []byte("foooo")
-	_, err = gochiWriter.Write(data)
+	_, err = puterinWriter.Write(data)
 	// This gives an error, but how do I sure it is because the dir path is pointed to a file?
 	assert.Error(t, err)
 }
